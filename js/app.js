@@ -60,7 +60,38 @@ mainModule
             /*
                         $locationProvider.html5Mode(true);*/
         }
-    ]);
-var log = function() {
-    console.log("loaded");
-}
+    ])
+    .controller('mainController', ['$scope', '$route', function($scope, $route) {
+        $scope.$on('$viewContentLoaded', function(event) {
+
+            var closeVisibleSubMenu = function() {
+                jQuery('.nav-parent').each(function() {
+                    var t = jQuery(this);
+                    if (t.hasClass('nav-active')) {
+                        t.find('> ul').slideUp(200, function() {});
+                    }
+                });
+            };
+            /*
+            closeVisibleSubMenu();
+            jQuery('.leftpanelinner li.active').removeClass("nav-active active");
+            var activeListElement = jQuery("a[href='#/" + $route.current.loadedTemplateUrl + "']");
+            activeListElement.closest("li").addClass("active");
+            if (!activeListElement.parents(".nav-parent").hasClass("nav-active")) {
+                activeListElement.parents(".nav-parent").children("a")[0].click()
+            }
+            activeListElement.parents(".nav-parent").addClass("active nav-active");
+            console.log(event, '#/' + $route.current.loadedTemplateUrl);
+            */
+            closeVisibleSubMenu();
+            jQuery('.leftpanelinner li.active').removeClass('active');
+            jQuery('nav-parent').remove('nav-active');
+            var activeListElement = jQuery('a[href="#/' + $route.current.loadedTemplateUrl + '"]').closest("li");
+            activeListElement.addClass('active');
+            if (activeListElement.parents('ul').hasClass('children')) {
+                activeListElement.parents('.nav-parent').addClass('active');
+                activeListElement.parents('.nav-parent').children("a")[0].click();
+            }
+
+        });
+    }]);
