@@ -51,7 +51,7 @@ mainModule
                 .otherwise({
                     redirectTo: '/dashboard.html'
                 });
-
+            //$locationProvider.html5Mode(true)
             /*.when('/Book/:bookId/ch/:chapterId', {
                 templateUrl: 'chapter.html',
                 controller: 'ChapterCtrl',
@@ -63,34 +63,31 @@ mainModule
     ])
     .controller('mainController', ['$scope', '$route', function($scope, $route) {
         $scope.$on('$viewContentLoaded', function(event) {
-
-            var closeVisibleSubMenu = function() {
-                jQuery('.nav-parent').each(function() {
-                    var t = jQuery(this);
-                    if (t.hasClass('nav-active')) {
-                        t.find('> ul').slideUp(200, function() {});
-                    }
-                });
-            };
-            /*
-            closeVisibleSubMenu();
-            jQuery('.leftpanelinner li.active').removeClass("nav-active active");
-            var activeListElement = jQuery("a[href='#/" + $route.current.loadedTemplateUrl + "']");
-            activeListElement.closest("li").addClass("active");
-            if (!activeListElement.parents(".nav-parent").hasClass("nav-active")) {
-                activeListElement.parents(".nav-parent").children("a")[0].click()
-            }
-            activeListElement.parents(".nav-parent").addClass("active nav-active");
-            console.log(event, '#/' + $route.current.loadedTemplateUrl);
-            */
-            closeVisibleSubMenu();
-            jQuery('.leftpanelinner li.active').removeClass('active');
-            jQuery('nav-parent').remove('nav-active');
             var activeListElement = jQuery('a[href="#/' + $route.current.loadedTemplateUrl + '"]').closest("li");
+            /*
+                        var closeVisibleSubMenu = function() {
+                            jQuery('.nav-parent').each(function() {
+                                var t = jQuery(this);
+                                if (t.hasClass('nav-active')) {
+                                    t.find('> ul').slideUp(200, function() {});
+                                }
+                            });
+                        };*/
+            // closeVisibleSubMenu();
+
+
+            if (jQuery('.nav-active').length &&
+                !jQuery.contains(jQuery('.nav-active')[0], activeListElement[0])) {
+                jQuery('.nav-active > ul').slideUp(200);
+                jQuery('.nav-active').removeClass('nav-active');
+            }
+
+            //For only intra-sub menu 
+            jQuery('.leftpanelinner li.active').removeClass('active');
             activeListElement.addClass('active');
             if (activeListElement.parents('ul').hasClass('children')) {
-                activeListElement.parents('.nav-parent').addClass('active');
-                activeListElement.parents('.nav-parent').children("a")[0].click();
+                activeListElement.parents('.nav-parent').addClass('active nav-active');
+                activeListElement.parents('ul').slideDown(200);
             }
 
         });
