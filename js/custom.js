@@ -13,7 +13,6 @@ jQuery(document).ready(function() {
 
     // Toggle Left Menu
     jQuery('.nav-parent > a').click(function() {
-        console.log('(.nav-parent > a).click()')
         var parent = jQuery(this).parent();
         var sub = parent.find('> ul');
 

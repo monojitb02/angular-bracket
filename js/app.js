@@ -1,7 +1,9 @@
+'use strict';
 var mainModule = angular.module('hikick', ['ngRoute']);
 mainModule
     .config(['$routeProvider', '$locationProvider',
         function($routeProvider, $locationProvider) {
+            console.log('ksgdjsagd');
             $routeProvider
                 .when('/dashboard.html', {
                     templateUrl: 'dashboard.html'
@@ -63,18 +65,7 @@ mainModule
     ])
     .controller('mainController', ['$scope', '$route', function($scope, $route) {
         $scope.$on('$viewContentLoaded', function(event) {
-            var activeListElement = jQuery('a[href="#/' + $route.current.loadedTemplateUrl + '"]').closest("li");
-            /*
-                        var closeVisibleSubMenu = function() {
-                            jQuery('.nav-parent').each(function() {
-                                var t = jQuery(this);
-                                if (t.hasClass('nav-active')) {
-                                    t.find('> ul').slideUp(200, function() {});
-                                }
-                            });
-                        };*/
-            // closeVisibleSubMenu();
-
+            var activeListElement = jQuery('a[href="#/' + $route.current.loadedTemplateUrl + '"]').closest('li');
 
             if (jQuery('.nav-active').length &&
                 !jQuery.contains(jQuery('.nav-active')[0], activeListElement[0])) {
