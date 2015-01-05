@@ -57,6 +57,7 @@ module.exports = function($scope, $rootScope, $state, $http, $timeout) {
     };
     //validation of form
     $scope.$on('$viewContentLoaded', function() {
+        $rootScope.currentPath = window.location.hash.replace(/\?.*$/, '');
         loginForm = jQuery("#login_form");
         loginForm.validate({
             rules: {

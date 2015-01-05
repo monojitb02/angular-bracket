@@ -1,8 +1,7 @@
 'use strict';
 var utility = require('../../../util');
 var api = require('../../../util/api');
-module.exports = function($scope, $state, $http) {
-
+module.exports = function($scope, $rootScope, $state, $http, $timeout) {
     //checking login status
     /*    var user = utility.getCookie('user');
         if (user) {
@@ -28,47 +27,32 @@ module.exports = function($scope, $state, $http) {
             //TODO: show error message
         });
     };
-
-    $scope.$on('$viewContentLoaded', function(event) {
-        var originalHash = window.location.hash.replace(/\?.*$/, '');
-        var activeListElement = jQuery('a[href="' + originalHash + '"]').closest("li");
-        if (jQuery('.nav-active').length &&
-            !jQuery.contains(jQuery('.nav-active')[0], activeListElement[0])) {
-            jQuery('.nav-active > ul').slideUp(200);
-            jQuery('.nav-active').removeClass('nav-active');
-        }
-
-        //For only intra-sub menu 
-        jQuery('.leftpanelinner li.active').removeClass('active');
-        activeListElement.addClass('active');
-        if (activeListElement.parents('ul').hasClass('children')) {
-            activeListElement.parents('.nav-parent').addClass('active nav-active');
-            activeListElement.parents('ul').slideDown(200);
-        }
+    $scope.$on('$stateChangeSuccess', function(event) {
+        console.log('stateChangeSuccess');
     });
+    $scope.$on('$viewContentLoaded', function(event) {
+        console.log('viewContentLoaded');
+        $timeout(function() {
+            console.log('test window location', window.location, window.location.hash);
+            var originalHash = window.location.hash /*.replace(/\?.*$/, '')*/ ,
+                activeListElement = jQuery('a[href="' + originalHash + '"]').closest("li");
+            $rootScope.currentPath = originalHash;
 
-    jQuery('.nav-parent > a').click(function() {
-        var parent = jQuery(this).parent();
-        var sub = parent.find('> ul');
-        // Dropdown works only when leftpanel is not collapsed
-        if (!jQuery('body').hasClass('leftpanel-collapsed')) {
-            if (sub.is(':visible')) {
-                sub.slideUp(200, function() {
-                    parent.removeClass('nav-active');
-                    jQuery('.mainpanel').css({
-                        height: ''
-                    });
-                    adjustmainpanelheight();
-                });
-            } else {
-                closeVisibleSubMenu();
-                parent.addClass('nav-active');
-                sub.slideDown(200, function() {
-                    adjustmainpanelheight();
-                });
+            if (jQuery('.nav-active').length &&
+                !jQuery.contains(jQuery('.nav-active')[0], activeListElement[0])) {
+                jQuery('.nav-active > ul').slideUp(200);
+                jQuery('.nav-active').removeClass('nav-active');
             }
-        }
-        return false;
+
+            // For only transition between items of same sub menu 
+            jQuery('.leftpanelinner li.active').removeClass('active');
+            activeListElement.addClass('active');
+            if (activeListElement.parents('ul').hasClass('children')) {
+                activeListElement.parents('.nav-parent').addClass('active nav-active');
+                activeListElement.parents('ul').slideDown(200);
+            }
+        }, 0);
+
     });
 
     function closeVisibleSubMenu() {
@@ -89,19 +73,45 @@ module.exports = function($scope, $state, $http) {
             jQuery('.mainpanel').height(docHeight);
     }
 
-
     jQuery('.nav-bracket > li').hover(function() {
         jQuery(this).addClass('nav-hover');
     }, function() {
         jQuery(this).removeClass('nav-hover');
     });
-    jQuery('.menutoggle').click(function() {
-        console.log('menue toggle from custom.js');
+
+    // Menu Toggle slide
+    $scope.toggleMenuSlide = function($event) {
+        var navParent = jQuery($event.target).parent();
+        var sub = navParent.find('> ul');
+        console.log('menu slide');
+        // Dropdown works only when leftpanel is not collapsed
+        if (!jQuery('body').hasClass('leftpanel-collapsed')) {
+            console.log(sub.is(':visible'));
+            if (sub.is(':visible')) {
+                sub.slideUp(200, function() {
+                    navParent.removeClass('nav-active');
+                    jQuery('.mainpanel').css({
+                        height: ''
+                    });
+                    adjustmainpanelheight();
+                });
+            } else {
+                closeVisibleSubMenu();
+                navParent.addClass('nav-active');
+                sub.slideDown(200, function() {
+                    adjustmainpanelheight();
+                });
+            }
+        }
+        return false;
+    };
+
+    // Menu Toggle
+    $scope.toggleMenu = function() {
+        console.log('test menutoggle');
         var body = jQuery('body');
         var bodypos = body.css('position');
-
         if (bodypos != 'relative') {
-
             if (!body.hasClass('leftpanel-collapsed')) {
                 body.addClass('leftpanel-collapsed');
                 jQuery('.nav-bracket ul').attr('style', '');
@@ -113,19 +123,47 @@ module.exports = function($scope, $state, $http) {
                 jQuery('.nav-bracket li.active ul').css({
                     display: 'block'
                 });
-
                 jQuery(this).removeClass('menu-collapsed');
-
             }
         } else {
-
-            if (body.hasClass('leftpanel-show'))
+            if (body.hasClass('leftpanel-show')) {
                 body.removeClass('leftpanel-show');
-            else
+            } else {
                 body.addClass('leftpanel-show');
-
+            }
             adjustmainpanelheight();
         }
+    };
 
-    });
+    // Chat View
+    $scope.toggleChatView = function() {
+        var body = jQuery('body');
+        var bodypos = body.css('position');
+        if (bodypos != 'relative') {
+            if (!body.hasClass('chat-view')) {
+                body.addClass('leftpanel-collapsed chat-view');
+                jQuery('.nav-bracket ul').attr('style', '');
+            } else {
+                body.removeClass('chat-view');
+                if (!jQuery('.menutoggle').hasClass('menu-collapsed')) {
+                    jQuery('body').removeClass('leftpanel-collapsed');
+                    jQuery('.nav-bracket li.active ul').css({
+                        display: 'block'
+                    });
+                } else {
+
+                }
+            }
+        } else {
+            if (!body.hasClass('chat-relative-view')) {
+                body.addClass('chat-relative-view');
+                body.css({
+                    left: ''
+                });
+            } else {
+                body.removeClass('chat-relative-view');
+            }
+        }
+    };
+
 };

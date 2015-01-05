@@ -57,6 +57,10 @@ module.exports = function($stateProvider, $locationProvider, $urlRouterProvider)
                 }
             }
         });
+    $urlRouterProvider.otherwise(function($injector) {
+        var $state = $injector.get('$state');
+        $state.go('app.home')
+    });
 };
 
 },{"../templates/dashBoard.html":"/var/www/html/angular-bracket/app/modules/dashBoard/templates/dashBoard.html"}],"/var/www/html/angular-bracket/app/modules/dashBoard/templates/dashBoard.html":[function(require,module,exports){
@@ -146,6 +150,7 @@ module.exports = function($scope, $rootScope, $state, $http, $timeout) {
     };
     //validation of form
     $scope.$on('$viewContentLoaded', function() {
+        $rootScope.currentPath = window.location.hash.replace(/\?.*$/, '');
         loginForm = jQuery("#login_form");
         loginForm.validate({
             rules: {
@@ -189,8 +194,7 @@ module.exports = '<section>\n  <div class="signinpanel">\n\n    <div class="row"
 'use strict';
 var utility = require('../../../util');
 var api = require('../../../util/api');
-module.exports = function($scope, $state, $http) {
-
+module.exports = function($scope, $rootScope, $state, $http, $timeout) {
     //checking login status
     /*    var user = utility.getCookie('user');
         if (user) {
@@ -216,47 +220,32 @@ module.exports = function($scope, $state, $http) {
             //TODO: show error message
         });
     };
-
-    $scope.$on('$viewContentLoaded', function(event) {
-        var originalHash = window.location.hash.replace(/\?.*$/, '');
-        var activeListElement = jQuery('a[href="' + originalHash + '"]').closest("li");
-        if (jQuery('.nav-active').length &&
-            !jQuery.contains(jQuery('.nav-active')[0], activeListElement[0])) {
-            jQuery('.nav-active > ul').slideUp(200);
-            jQuery('.nav-active').removeClass('nav-active');
-        }
-
-        //For only intra-sub menu 
-        jQuery('.leftpanelinner li.active').removeClass('active');
-        activeListElement.addClass('active');
-        if (activeListElement.parents('ul').hasClass('children')) {
-            activeListElement.parents('.nav-parent').addClass('active nav-active');
-            activeListElement.parents('ul').slideDown(200);
-        }
+    $scope.$on('$stateChangeSuccess', function(event) {
+        console.log('stateChangeSuccess');
     });
+    $scope.$on('$viewContentLoaded', function(event) {
+        console.log('viewContentLoaded');
+        $timeout(function() {
+            console.log('test window location', window.location, window.location.hash);
+            var originalHash = window.location.hash /*.replace(/\?.*$/, '')*/ ,
+                activeListElement = jQuery('a[href="' + originalHash + '"]').closest("li");
+            $rootScope.currentPath = originalHash;
 
-    jQuery('.nav-parent > a').click(function() {
-        var parent = jQuery(this).parent();
-        var sub = parent.find('> ul');
-        // Dropdown works only when leftpanel is not collapsed
-        if (!jQuery('body').hasClass('leftpanel-collapsed')) {
-            if (sub.is(':visible')) {
-                sub.slideUp(200, function() {
-                    parent.removeClass('nav-active');
-                    jQuery('.mainpanel').css({
-                        height: ''
-                    });
-                    adjustmainpanelheight();
-                });
-            } else {
-                closeVisibleSubMenu();
-                parent.addClass('nav-active');
-                sub.slideDown(200, function() {
-                    adjustmainpanelheight();
-                });
+            if (jQuery('.nav-active').length &&
+                !jQuery.contains(jQuery('.nav-active')[0], activeListElement[0])) {
+                jQuery('.nav-active > ul').slideUp(200);
+                jQuery('.nav-active').removeClass('nav-active');
             }
-        }
-        return false;
+
+            // For only transition between items of same sub menu 
+            jQuery('.leftpanelinner li.active').removeClass('active');
+            activeListElement.addClass('active');
+            if (activeListElement.parents('ul').hasClass('children')) {
+                activeListElement.parents('.nav-parent').addClass('active nav-active');
+                activeListElement.parents('ul').slideDown(200);
+            }
+        }, 0);
+
     });
 
     function closeVisibleSubMenu() {
@@ -277,19 +266,45 @@ module.exports = function($scope, $state, $http) {
             jQuery('.mainpanel').height(docHeight);
     }
 
-
     jQuery('.nav-bracket > li').hover(function() {
         jQuery(this).addClass('nav-hover');
     }, function() {
         jQuery(this).removeClass('nav-hover');
     });
-    jQuery('.menutoggle').click(function() {
-        console.log('menue toggle from custom.js');
+
+    // Menu Toggle slide
+    $scope.toggleMenuSlide = function($event) {
+        var navParent = jQuery($event.target).parent();
+        var sub = navParent.find('> ul');
+        console.log('menu slide');
+        // Dropdown works only when leftpanel is not collapsed
+        if (!jQuery('body').hasClass('leftpanel-collapsed')) {
+            console.log(sub.is(':visible'));
+            if (sub.is(':visible')) {
+                sub.slideUp(200, function() {
+                    navParent.removeClass('nav-active');
+                    jQuery('.mainpanel').css({
+                        height: ''
+                    });
+                    adjustmainpanelheight();
+                });
+            } else {
+                closeVisibleSubMenu();
+                navParent.addClass('nav-active');
+                sub.slideDown(200, function() {
+                    adjustmainpanelheight();
+                });
+            }
+        }
+        return false;
+    };
+
+    // Menu Toggle
+    $scope.toggleMenu = function() {
+        console.log('test menutoggle');
         var body = jQuery('body');
         var bodypos = body.css('position');
-
         if (bodypos != 'relative') {
-
             if (!body.hasClass('leftpanel-collapsed')) {
                 body.addClass('leftpanel-collapsed');
                 jQuery('.nav-bracket ul').attr('style', '');
@@ -301,21 +316,49 @@ module.exports = function($scope, $state, $http) {
                 jQuery('.nav-bracket li.active ul').css({
                     display: 'block'
                 });
-
                 jQuery(this).removeClass('menu-collapsed');
-
             }
         } else {
-
-            if (body.hasClass('leftpanel-show'))
+            if (body.hasClass('leftpanel-show')) {
                 body.removeClass('leftpanel-show');
-            else
+            } else {
                 body.addClass('leftpanel-show');
-
+            }
             adjustmainpanelheight();
         }
+    };
 
-    });
+    // Chat View
+    $scope.toggleChatView = function() {
+        var body = jQuery('body');
+        var bodypos = body.css('position');
+        if (bodypos != 'relative') {
+            if (!body.hasClass('chat-view')) {
+                body.addClass('leftpanel-collapsed chat-view');
+                jQuery('.nav-bracket ul').attr('style', '');
+            } else {
+                body.removeClass('chat-view');
+                if (!jQuery('.menutoggle').hasClass('menu-collapsed')) {
+                    jQuery('body').removeClass('leftpanel-collapsed');
+                    jQuery('.nav-bracket li.active ul').css({
+                        display: 'block'
+                    });
+                } else {
+
+                }
+            }
+        } else {
+            if (!body.hasClass('chat-relative-view')) {
+                body.addClass('chat-relative-view');
+                body.css({
+                    left: ''
+                });
+            } else {
+                body.removeClass('chat-relative-view');
+            }
+        }
+    };
+
 };
 
 },{"../../../util":"/var/www/html/angular-bracket/app/util/index.js","../../../util/api":"/var/www/html/angular-bracket/app/util/api.js"}],"/var/www/html/angular-bracket/app/modules/panel/panel.module.js":[function(require,module,exports){
@@ -339,7 +382,7 @@ module.exports = function($stateProvider, $locationProvider, $urlRouterProvider)
 };
 
 },{"../templates/panel.html":"/var/www/html/angular-bracket/app/modules/panel/templates/panel.html"}],"/var/www/html/angular-bracket/app/modules/panel/templates/panel.html":[function(require,module,exports){
-module.exports = '<section>\n  <div class="leftpanel">\n\n    <div class="logopanel">\n      <h1><span>[</span> bracket <span>]</span></h1>\n    </div>\n    <!-- logopanel -->\n\n    <div class="leftpanelinner">\n\n      <!-- This is only visible to small devices -->\n      <div class="visible-xs hidden-sm hidden-md hidden-lg">\n        <div class="media userlogged">\n          <img alt="" src="images/photos/loggeduser.png" class="media-object">\n          <div class="media-body">\n            <h4>John Doe</h4>\n            <span>"Life is so..."</span>\n          </div>\n        </div>\n\n        <h5 class="sidebartitle actitle">Account</h5>\n        <ul class="nav nav-pills nav-stacked nav-bracket mb30">\n          <li><a href="profile.html"><i class="fa fa-user"></i> <span>Profile</span></a>\n          </li>\n          <li><a href=""><i class="fa fa-cog"></i> <span>Account Settings</span></a>\n          </li>\n          <li><a href=""><i class="fa fa-question-circle"></i> <span>Help</span></a>\n          </li>\n          <li><a href="signout.html"><i class="fa fa-sign-out"></i> <span>Sign Out</span></a>\n          </li>\n        </ul>\n      </div>\n\n      <h5 class="sidebartitle">Navigation</h5>\n      <ul class="nav nav-pills nav-stacked nav-bracket">\n        <li class="active"><a href="index.html"><i class="fa fa-home"></i> <span>Dashboard</span></a>\n        </li>\n        <li><a href="email.html"><span class="pull-right badge badge-success">2</span><i class="fa fa-envelope-o"></i> <span>Email</span></a>\n        </li>\n        <li class="nav-parent"><a href=""><i class="fa fa-edit"></i> <span>Forms</span></a>\n          <ul class="children">\n            <li><a href="general-forms.html"><i class="fa fa-caret-right"></i> General Forms</a>\n            </li>\n            <li><a href="form-layouts.html"><i class="fa fa-caret-right"></i> Form Layouts</a>\n            </li>\n            <li><a href="form-validation.html"><i class="fa fa-caret-right"></i> Form Validation</a>\n            </li>\n            <li><a href="form-wizards.html"><i class="fa fa-caret-right"></i> Form Wizards</a>\n            </li>\n            <li><a href="wysiwyg.html"><i class="fa fa-caret-right"></i> Text Editor</a>\n            </li>\n            <li><a href="code-editor.html"><i class="fa fa-caret-right"></i> Code Editor</a>\n            </li>\n            <li><a href="x-editable.html"><i class="fa fa-caret-right"></i> X-Editable</a>\n            </li>\n          </ul>\n        </li>\n        <li class="nav-parent"><a href=""><i class="fa fa-suitcase"></i> <span>UI Elements</span></a>\n          <ul class="children">\n            <li><a href="buttons.html"><i class="fa fa-caret-right"></i> Buttons</a>\n            </li>\n            <li><a href="icons.html"><span class="pull-right badge badge-danger">updated</span><i class="fa fa-caret-right"></i> Icons</a>\n            </li>\n            <li><a href="typography.html"><i class="fa fa-caret-right"></i> Typography</a>\n            </li>\n            <li><a href="alerts.html"><i class="fa fa-caret-right"></i> Alerts &amp; Notifications</a>\n            </li>\n            <li><a href="modals.html"><i class="fa fa-caret-right"></i> Modals</a>\n            </li>\n            <li><a href="tabs-accordions.html"><i class="fa fa-caret-right"></i> Tabs &amp; Accordions</a>\n            </li>\n            <li><a href="sliders.html"><i class="fa fa-caret-right"></i> Sliders</a>\n            </li>\n            <li><a href="graphs.html"><i class="fa fa-caret-right"></i> Graphs &amp; Charts</a>\n            </li>\n            <li><a href="widgets.html"><i class="fa fa-caret-right"></i> Panels &amp; Widgets</a>\n            </li>\n            <li><a href="extras.html"><i class="fa fa-caret-right"></i> Extras</a>\n            </li>\n          </ul>\n        </li>\n        <li><a href="tables.html"><i class="fa fa-th-list"></i> <span>Tables</span></a>\n        </li>\n        <li class="nav-parent"><a href=""><i class="fa fa-bug"></i> <span>Bug Tracker</span></a>\n          <ul class="children">\n            <li><a href="bug-tracker.html"><i class="fa fa-caret-right"></i> Summary</a>\n            </li>\n            <li><a href="bug-issues.html"><i class="fa fa-caret-right"></i> Issues</a>\n            </li>\n            <li><a href="view-issue.html"><i class="fa fa-caret-right"></i> View Issue</a>\n            </li>\n          </ul>\n        </li>\n        <li><a href="maps.html"><i class="fa fa-map-marker"></i> <span>Maps</span></a>\n        </li>\n        <li class="nav-parent"><a href=""><i class="fa fa-file-text"></i> <span>Pages</span></a>\n          <ul class="children">\n            <li><a href="calendar.html"><i class="fa fa-caret-right"></i> Calendar</a>\n            </li>\n            <li><a href="media-manager.html"><i class="fa fa-caret-right"></i> Media Manager</a>\n            </li>\n            <li><a href="timeline.html"><i class="fa fa-caret-right"></i> Timeline</a>\n            </li>\n            <li><a href="blog-list.html"><i class="fa fa-caret-right"></i> Blog List</a>\n            </li>\n            <li><a href="blog-single.html"><i class="fa fa-caret-right"></i> Blog Single</a>\n            </li>\n            <li><a href="people-directory.html"><i class="fa fa-caret-right"></i> People Directory</a>\n            </li>\n            <li><a href="profile.html"><i class="fa fa-caret-right"></i> Profile</a>\n            </li>\n            <li><a href="invoice.html"><i class="fa fa-caret-right"></i> Invoice</a>\n            </li>\n            <li><a href="search-results.html"><i class="fa fa-caret-right"></i> Search Results</a>\n            </li>\n            <li><a href="blank.html"><i class="fa fa-caret-right"></i> Blank Page</a>\n            </li>\n            <li><a href="notfound.html"><i class="fa fa-caret-right"></i> 404 Page</a>\n            </li>\n            <li><a href="locked.html"><i class="fa fa-caret-right"></i> Locked Screen</a>\n            </li>\n            <li><a href="signin.html"><i class="fa fa-caret-right"></i> Sign In</a>\n            </li>\n            <li><a href="signup.html"><i class="fa fa-caret-right"></i> Sign Up</a>\n            </li>\n          </ul>\n        </li>\n        <li class="nav-parent"><a href="layouts.html"><i class="fa fa-laptop"></i> <span>Skins &amp; Layouts</span></a>\n          <ul class="children">\n            <li><a href="layouts.html"><i class="fa fa-caret-right"></i> General Layouts</a>\n            </li>\n            <li><a href="horizontal-menu.html"><i class="fa fa-caret-right"></i> Top Menu</a>\n            </li>\n            <li><a href="horizontal-menu2.html"><i class="fa fa-caret-right"></i> Top Menu w/ Sidebar</a>\n            </li>\n            <li><a href="fixed-width.html"><i class="fa fa-caret-right"></i> Fixed Width Page</a>\n            </li>\n            <li><a href="fixed-width2.html"><i class="fa fa-caret-right"></i> Fixed Width w/ Menu</a>\n            </li>\n          </ul>\n        </li>\n      </ul>\n\n    </div>\n    <!-- leftpanelinner -->\n  </div>\n  <!-- leftpanel -->\n\n  <div class="mainpanel">\n\n    <div class="headerbar">\n\n      <a class="menutoggle"><i class="fa fa-bars"></i></a>\n\n      <form class="searchform" action="index.html" method="post">\n        <input type="text" class="form-control" name="keyword" placeholder="Search here..." />\n      </form>\n\n      <div class="header-right">\n        <ul class="headermenu">\n          <li>\n            <div class="btn-group">\n              <button class="btn btn-default dropdown-toggle tp-icon" data-toggle="dropdown">\n                <i class="glyphicon glyphicon-user"></i>\n                <span class="badge">2</span>\n              </button>\n              <div class="dropdown-menu dropdown-menu-head pull-right">\n                <h5 class="title">2 Newly Registered Users</h5>\n                <ul class="dropdown-list user-list">\n                  <li class="new">\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user1.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Draniem Daamul (@draniem)</a> <span class="badge badge-success">new</span></h5>\n                    </div>\n                  </li>\n                  <li class="new">\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user2.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Zaham Sindilmaca (@zaham)</a> <span class="badge badge-success">new</span></h5>\n                    </div>\n                  </li>\n                  <li>\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user3.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Weno Carasbong (@wenocar)</a></h5>\n                    </div>\n                  </li>\n                  <li>\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user4.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Nusja Nawancali (@nusja)</a></h5>\n                    </div>\n                  </li>\n                  <li>\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user5.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Lane Kitmari (@lane_kitmare)</a></h5>\n                    </div>\n                  </li>\n                  <li class="new"><a href="">See All Users</a>\n                  </li>\n                </ul>\n              </div>\n            </div>\n          </li>\n          <li>\n            <div class="btn-group">\n              <button class="btn btn-default dropdown-toggle tp-icon" data-toggle="dropdown">\n                <i class="glyphicon glyphicon-envelope"></i>\n                <span class="badge">1</span>\n              </button>\n              <div class="dropdown-menu dropdown-menu-head pull-right">\n                <h5 class="title">You Have 1 New Message</h5>\n                <ul class="dropdown-list gen-list">\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user1.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Draniem Daamul <span class="badge badge-success">new</span></span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li>\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user2.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Nusja Nawancali</span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li>\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user3.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Weno Carasbong</span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li>\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user4.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Zaham Sindilmaca</span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li>\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user5.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Veno Leongal</span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new"><a href="">Read All Messages</a>\n                  </li>\n                </ul>\n              </div>\n            </div>\n          </li>\n          <li>\n            <div class="btn-group">\n              <button class="btn btn-default dropdown-toggle tp-icon" data-toggle="dropdown">\n                <i class="glyphicon glyphicon-globe"></i>\n                <span class="badge">5</span>\n              </button>\n              <div class="dropdown-menu dropdown-menu-head pull-right">\n                <h5 class="title">You Have 5 New Notifications</h5>\n                <ul class="dropdown-list gen-list">\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user4.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Zaham Sindilmaca <span class="badge badge-success">new</span></span>\n                      <span class="msg">is now following you</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user5.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Weno Carasbong <span class="badge badge-success">new</span></span>\n                      <span class="msg">is now following you</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user3.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Veno Leongal <span class="badge badge-success">new</span></span>\n                      <span class="msg">likes your recent status</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user3.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Nusja Nawancali <span class="badge badge-success">new</span></span>\n                      <span class="msg">downloaded your work</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user3.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Nusja Nawancali <span class="badge badge-success">new</span></span>\n                      <span class="msg">send you 2 messages</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new"><a href="">See All Notifications</a>\n                  </li>\n                </ul>\n              </div>\n            </div>\n          </li>\n          <li>\n            <div class="btn-group">\n              <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">\n                <img src="images/photos/loggeduser.png" alt="" /> John Doe\n                <span class="caret"></span>\n              </button>\n              <ul class="dropdown-menu dropdown-menu-usermenu pull-right">\n                <li><a href="profile.html"><i class="glyphicon glyphicon-user"></i> My Profile</a>\n                </li>\n                <li><a href="#"><i class="glyphicon glyphicon-cog"></i> Account Settings</a>\n                </li>\n                <li><a href="#"><i class="glyphicon glyphicon-question-sign"></i> Help</a>\n                </li>\n                <li><a href="signin.html"><i class="glyphicon glyphicon-log-out"></i> Log Out</a>\n                </li>\n              </ul>\n            </div>\n          </li>\n          <li>\n            <button id="chatview" class="btn btn-default tp-icon chat-icon">\n              <i class="glyphicon glyphicon-comment"></i>\n            </button>\n          </li>\n        </ul>\n      </div>\n      <!-- header-right -->\n\n    </div>\n    <!-- headerbar -->\n\n    <div ui-view="pages">\n\n    </div>\n\n    <!-- contentpanel -->\n\n  </div>\n  <!-- mainpanel -->\n\n  <div class="rightpanel">\n    <!-- Nav tabs -->\n    <ul class="nav nav-tabs nav-justified">\n      <li class="active"><a href="#rp-alluser" data-toggle="tab"><i class="fa fa-users"></i></a>\n      </li>\n      <li><a href="#rp-favorites" data-toggle="tab"><i class="fa fa-heart"></i></a>\n      </li>\n      <li><a href="#rp-history" data-toggle="tab"><i class="fa fa-clock-o"></i></a>\n      </li>\n      <li><a href="#rp-settings" data-toggle="tab"><i class="fa fa-gear"></i></a>\n      </li>\n    </ul>\n\n    <!-- Tab panes -->\n    <div class="tab-content">\n      <div class="tab-pane active" id="rp-alluser">\n        <h5 class="sidebartitle">Online Users</h5>\n        <ul class="chatuserlist">\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/userprofile.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Eileen Sideways</strong>\n                <small>Los Angeles, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user1.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <span class="pull-right badge badge-danger">2</span>\n                <strong>Zaham Sindilmaca</strong>\n                <small>San Francisco, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user2.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Nusja Nawancali</strong>\n                <small>Bangkok, Thailand</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user3.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Renov Leongal</strong>\n                <small>Cebu City, Philippines</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Weno Carasbong</strong>\n                <small>Tokyo, Japan</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n        </ul>\n\n        <div class="mb30"></div>\n\n        <h5 class="sidebartitle">Offline Users</h5>\n        <ul class="chatuserlist">\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user5.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Eileen Sideways</strong>\n                <small>Los Angeles, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user2.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Zaham Sindilmaca</strong>\n                <small>San Francisco, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user3.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Nusja Nawancali</strong>\n                <small>Bangkok, Thailand</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Renov Leongal</strong>\n                <small>Cebu City, Philippines</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user5.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Weno Carasbong</strong>\n                <small>Tokyo, Japan</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Renov Leongal</strong>\n                <small>Cebu City, Philippines</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user5.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Weno Carasbong</strong>\n                <small>Tokyo, Japan</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n        </ul>\n      </div>\n      <div class="tab-pane" id="rp-favorites">\n        <h5 class="sidebartitle">Favorites</h5>\n        <ul class="chatuserlist">\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user2.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Eileen Sideways</strong>\n                <small>Los Angeles, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user1.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Zaham Sindilmaca</strong>\n                <small>San Francisco, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user3.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Nusja Nawancali</strong>\n                <small>Bangkok, Thailand</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Renov Leongal</strong>\n                <small>Cebu City, Philippines</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user5.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Weno Carasbong</strong>\n                <small>Tokyo, Japan</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n        </ul>\n      </div>\n      <div class="tab-pane" id="rp-history">\n        <h5 class="sidebartitle">History</h5>\n        <ul class="chatuserlist">\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Eileen Sideways</strong>\n                <small>Hi hello, ctc?... would you mind if I go to your...</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user2.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Zaham Sindilmaca</strong>\n                <small>This is to inform you that your product that we...</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user3.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Nusja Nawancali</strong>\n                <small>Are you willing to have a long term relat...</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n        </ul>\n      </div>\n      <div class="tab-pane pane-settings" id="rp-settings">\n\n        <h5 class="sidebartitle mb20">Settings</h5>\n        <div class="form-group">\n          <label class="col-xs-8 control-label">Show Offline Users</label>\n          <div class="col-xs-4 control-label">\n            <div class="toggle toggle-success"></div>\n          </div>\n        </div>\n\n        <div class="form-group">\n          <label class="col-xs-8 control-label">Enable History</label>\n          <div class="col-xs-4 control-label">\n            <div class="toggle toggle-success"></div>\n          </div>\n        </div>\n\n        <div class="form-group">\n          <label class="col-xs-8 control-label">Show Full Name</label>\n          <div class="col-xs-4 control-label">\n            <div class="toggle-chat1 toggle-success"></div>\n          </div>\n        </div>\n\n        <div class="form-group">\n          <label class="col-xs-8 control-label">Show Location</label>\n          <div class="col-xs-4 control-label">\n            <div class="toggle toggle-success"></div>\n          </div>\n        </div>\n\n      </div>\n      <!-- tab-pane -->\n\n    </div>\n    <!-- tab-content -->\n  </div>\n  <!-- rightpanel -->\n\n\n</section>\n';
+module.exports = '<section>\n  <div class="leftpanel">\n\n    <div class="logopanel">\n      <h1><span>[</span> bracket <span>]</span></h1>\n    </div>\n    <!-- logopanel -->\n\n    <div class="leftpanelinner">\n\n      <!-- This is only visible to small devices -->\n      <div class="visible-xs hidden-sm hidden-md hidden-lg">\n        <div class="media userlogged">\n          <img alt="" src="images/photos/loggeduser.png" class="media-object">\n          <div class="media-body">\n            <h4>John Doe</h4>\n            <span>"Life is so..."</span>\n          </div>\n        </div>\n\n        <h5 class="sidebartitle actitle">Account</h5>\n        <ul class="nav nav-pills nav-stacked nav-bracket mb30">\n          <li><a href="profile.html"><i class="fa fa-user"></i> <span>Profile</span></a>\n          </li>\n          <li><a href=""><i class="fa fa-cog"></i> <span>Account Settings</span></a>\n          </li>\n          <li><a href=""><i class="fa fa-question-circle"></i> <span>Help</span></a>\n          </li>\n          <li><a href="signout.html"><i class="fa fa-sign-out"></i> <span>Sign Out</span></a>\n          </li>\n        </ul>\n      </div>\n\n      <h5 class="sidebartitle">Navigation</h5>\n      <ul class="nav nav-pills nav-stacked nav-bracket">\n        <li class=""><a href=""><i class="fa fa-home"></i> <span>Dashboard</span></a>\n        </li>\n        <li><a href="#/email"><span class="pull-right badge badge-success">2</span><i class="fa fa-envelope-o"></i> <span>Email</span></a>\n        </li>\n        <li class="nav-parent"><a ng-click="toggleMenuSlide($event)"><i class="fa fa-edit"></i> <span>Forms</span></a>\n          <ul class="children">\n            <li><a href="general-forms.html"><i class="fa fa-caret-right"></i> General Forms</a>\n            </li>\n            <li><a href="form-layouts.html"><i class="fa fa-caret-right"></i> Form Layouts</a>\n            </li>\n            <li><a href="form-validation.html"><i class="fa fa-caret-right"></i> Form Validation</a>\n            </li>\n          </ul>\n        </li>\n        <li class="nav-parent"><a ng-click="toggleMenuSlide($event)"><i class="fa fa-suitcase"></i> <span>UI Elements</span></a>\n          <ul class="children">\n            <li><a href="buttons.html"><i class="fa fa-caret-right"></i> Buttons</a>\n            </li>\n            <li><a href="#/home"><span class="pull-right badge badge-danger">updated</span><i class="fa fa-caret-right"></i> Icons</a>\n            </li>\n            <li><a href="typography.html"><i class="fa fa-caret-right"></i> Typography</a>\n            </li>\n            <li><a href="alerts.html"><i class="fa fa-caret-right"></i> Alerts &amp; Notifications</a>\n            </li>\n          </ul>\n        </li>\n      </ul>\n\n    </div>\n    <!-- leftpanelinner -->\n  </div>\n  <!-- leftpanel -->\n\n  <div class="mainpanel">\n\n    <div class="headerbar">\n\n      <a class="menutoggle" ng-click="toggleMenu()"><i class="fa fa-bars"></i></a>\n\n      <form class="searchform" action="index.html" method="post">\n        <input type="text" class="form-control" name="keyword" placeholder="Search here..." />\n      </form>\n\n      <div class="header-right">\n        <ul class="headermenu">\n          <li>\n            <div class="btn-group">\n              <button class="btn btn-default dropdown-toggle tp-icon" data-toggle="dropdown">\n                <i class="glyphicon glyphicon-user"></i>\n                <span class="badge">2</span>\n              </button>\n              <div class="dropdown-menu dropdown-menu-head pull-right">\n                <h5 class="title">2 Newly Registered Users</h5>\n                <ul class="dropdown-list user-list">\n                  <li class="new">\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user1.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Draniem Daamul (@draniem)</a> <span class="badge badge-success">new</span></h5>\n                    </div>\n                  </li>\n                  <li class="new">\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user2.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Zaham Sindilmaca (@zaham)</a> <span class="badge badge-success">new</span></h5>\n                    </div>\n                  </li>\n                  <li>\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user3.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Weno Carasbong (@wenocar)</a></h5>\n                    </div>\n                  </li>\n                  <li>\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user4.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Nusja Nawancali (@nusja)</a></h5>\n                    </div>\n                  </li>\n                  <li>\n                    <div class="thumb">\n                      <a href=""><img src="images/photos/user5.png" alt="" />\n                      </a>\n                    </div>\n                    <div class="desc">\n                      <h5><a href="">Lane Kitmari (@lane_kitmare)</a></h5>\n                    </div>\n                  </li>\n                  <li class="new"><a href="">See All Users</a>\n                  </li>\n                </ul>\n              </div>\n            </div>\n          </li>\n          <li>\n            <div class="btn-group">\n              <button class="btn btn-default dropdown-toggle tp-icon" data-toggle="dropdown">\n                <i class="glyphicon glyphicon-envelope"></i>\n                <span class="badge">1</span>\n              </button>\n              <div class="dropdown-menu dropdown-menu-head pull-right">\n                <h5 class="title">You Have 1 New Message</h5>\n                <ul class="dropdown-list gen-list">\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user1.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Draniem Daamul <span class="badge badge-success">new</span></span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li>\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user2.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Nusja Nawancali</span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li>\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user3.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Weno Carasbong</span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li>\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user4.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Zaham Sindilmaca</span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li>\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user5.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Veno Leongal</span>\n                      <span class="msg">Lorem ipsum dolor sit amet...</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new"><a href="">Read All Messages</a>\n                  </li>\n                </ul>\n              </div>\n            </div>\n          </li>\n          <li>\n            <div class="btn-group">\n              <button class="btn btn-default dropdown-toggle tp-icon" data-toggle="dropdown">\n                <i class="glyphicon glyphicon-globe"></i>\n                <span class="badge">5</span>\n              </button>\n              <div class="dropdown-menu dropdown-menu-head pull-right">\n                <h5 class="title">You Have 5 New Notifications</h5>\n                <ul class="dropdown-list gen-list">\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user4.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Zaham Sindilmaca <span class="badge badge-success">new</span></span>\n                      <span class="msg">is now following you</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user5.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Weno Carasbong <span class="badge badge-success">new</span></span>\n                      <span class="msg">is now following you</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user3.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Veno Leongal <span class="badge badge-success">new</span></span>\n                      <span class="msg">likes your recent status</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user3.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Nusja Nawancali <span class="badge badge-success">new</span></span>\n                      <span class="msg">downloaded your work</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new">\n                    <a href="">\n                      <span class="thumb"><img src="images/photos/user3.png" alt="" /></span>\n                      <span class="desc">\n                      <span class="name">Nusja Nawancali <span class="badge badge-success">new</span></span>\n                      <span class="msg">send you 2 messages</span>\n                      </span>\n                    </a>\n                  </li>\n                  <li class="new"><a href="">See All Notifications</a>\n                  </li>\n                </ul>\n              </div>\n            </div>\n          </li>\n          <li>\n            <div class="btn-group">\n              <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">\n                <img src="images/photos/loggeduser.png" alt="" /> John Doe\n                <span class="caret"></span>\n              </button>\n              <ul class="dropdown-menu dropdown-menu-usermenu pull-right">\n                <li><a href="profile.html"><i class="glyphicon glyphicon-user"></i> My Profile</a>\n                </li>\n                <li><a href="#"><i class="glyphicon glyphicon-cog"></i> Account Settings</a>\n                </li>\n                <li><a href="#"><i class="glyphicon glyphicon-question-sign"></i> Help</a>\n                </li>\n                <li><a href="signin.html"><i class="glyphicon glyphicon-log-out"></i> Log Out</a>\n                </li>\n              </ul>\n            </div>\n          </li>\n          <li>\n            <button id="chatview" ng-click="toggleChatView()" class="btn btn-default tp-icon chat-icon">\n              <i class="glyphicon glyphicon-comment"></i>\n            </button>\n          </li>\n        </ul>\n      </div>\n      <!-- header-right -->\n\n    </div>\n    <!-- headerbar -->\n\n    <div ui-view="pages">\n\n    </div>\n\n    <!-- contentpanel -->\n\n  </div>\n  <!-- mainpanel -->\n\n  <div class="rightpanel">\n    <!-- Nav tabs -->\n    <ul class="nav nav-tabs nav-justified">\n      <li class="active"><a href="#rp-alluser" data-toggle="tab"><i class="fa fa-users"></i></a>\n      </li>\n      <li><a href="#rp-favorites" data-toggle="tab"><i class="fa fa-heart"></i></a>\n      </li>\n      <li><a href="#rp-history" data-toggle="tab"><i class="fa fa-clock-o"></i></a>\n      </li>\n      <li><a href="#rp-settings" data-toggle="tab"><i class="fa fa-gear"></i></a>\n      </li>\n    </ul>\n\n    <!-- Tab panes -->\n    <div class="tab-content">\n      <div class="tab-pane active" id="rp-alluser">\n        <h5 class="sidebartitle">Online Users</h5>\n        <ul class="chatuserlist">\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/userprofile.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Eileen Sideways</strong>\n                <small>Los Angeles, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user1.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <span class="pull-right badge badge-danger">2</span>\n                <strong>Zaham Sindilmaca</strong>\n                <small>San Francisco, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user2.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Nusja Nawancali</strong>\n                <small>Bangkok, Thailand</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user3.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Renov Leongal</strong>\n                <small>Cebu City, Philippines</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Weno Carasbong</strong>\n                <small>Tokyo, Japan</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n        </ul>\n\n        <div class="mb30"></div>\n\n        <h5 class="sidebartitle">Offline Users</h5>\n        <ul class="chatuserlist">\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user5.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Eileen Sideways</strong>\n                <small>Los Angeles, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user2.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Zaham Sindilmaca</strong>\n                <small>San Francisco, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user3.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Nusja Nawancali</strong>\n                <small>Bangkok, Thailand</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Renov Leongal</strong>\n                <small>Cebu City, Philippines</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user5.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Weno Carasbong</strong>\n                <small>Tokyo, Japan</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Renov Leongal</strong>\n                <small>Cebu City, Philippines</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user5.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Weno Carasbong</strong>\n                <small>Tokyo, Japan</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n        </ul>\n      </div>\n      <div class="tab-pane" id="rp-favorites">\n        <h5 class="sidebartitle">Favorites</h5>\n        <ul class="chatuserlist">\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user2.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Eileen Sideways</strong>\n                <small>Los Angeles, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user1.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Zaham Sindilmaca</strong>\n                <small>San Francisco, CA</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user3.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Nusja Nawancali</strong>\n                <small>Bangkok, Thailand</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Renov Leongal</strong>\n                <small>Cebu City, Philippines</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user5.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Weno Carasbong</strong>\n                <small>Tokyo, Japan</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n        </ul>\n      </div>\n      <div class="tab-pane" id="rp-history">\n        <h5 class="sidebartitle">History</h5>\n        <ul class="chatuserlist">\n          <li class="online">\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user4.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Eileen Sideways</strong>\n                <small>Hi hello, ctc?... would you mind if I go to your...</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user2.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Zaham Sindilmaca</strong>\n                <small>This is to inform you that your product that we...</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n          <li>\n            <div class="media">\n              <a href="#" class="pull-left media-thumb">\n                <img alt="" src="images/photos/user3.png" class="media-object">\n              </a>\n              <div class="media-body">\n                <strong>Nusja Nawancali</strong>\n                <small>Are you willing to have a long term relat...</small>\n              </div>\n            </div>\n            <!-- media -->\n          </li>\n        </ul>\n      </div>\n      <div class="tab-pane pane-settings" id="rp-settings">\n\n        <h5 class="sidebartitle mb20">Settings</h5>\n        <div class="form-group">\n          <label class="col-xs-8 control-label">Show Offline Users</label>\n          <div class="col-xs-4 control-label">\n            <div class="toggle toggle-success"></div>\n          </div>\n        </div>\n\n        <div class="form-group">\n          <label class="col-xs-8 control-label">Enable History</label>\n          <div class="col-xs-4 control-label">\n            <div class="toggle toggle-success"></div>\n          </div>\n        </div>\n\n        <div class="form-group">\n          <label class="col-xs-8 control-label">Show Full Name</label>\n          <div class="col-xs-4 control-label">\n            <div class="toggle-chat1 toggle-success"></div>\n          </div>\n        </div>\n\n        <div class="form-group">\n          <label class="col-xs-8 control-label">Show Location</label>\n          <div class="col-xs-4 control-label">\n            <div class="toggle toggle-success"></div>\n          </div>\n        </div>\n\n      </div>\n      <!-- tab-pane -->\n\n    </div>\n    <!-- tab-content -->\n  </div>\n  <!-- rightpanel -->\n\n\n</section>\n';
 },{}],"/var/www/html/angular-bracket/app/modules/services/index.js":[function(require,module,exports){
 'use strict';
 
@@ -456,302 +499,302 @@ jQuery(window).load(function() {
     });
 });
 
-jQuery(document).ready(function() {
-
-    // Toggle Left Menu
-    jQuery('.leftpanel .nav-parent > a').live('click', function() {
-
-        var parent = jQuery(this).parent();
-        var sub = parent.find('> ul');
-
-        // Dropdown works only when leftpanel is not collapsed
-        if (!jQuery('body').hasClass('leftpanel-collapsed')) {
-            if (sub.is(':visible')) {
-                sub.slideUp(200, function() {
-                    parent.removeClass('nav-active');
-                    jQuery('.mainpanel').css({
-                        height: ''
-                    });
-                    adjustmainpanelheight();
-                });
-            } else {
-                closeVisibleSubMenu();
-                parent.addClass('nav-active');
-                sub.slideDown(200, function() {
-                    adjustmainpanelheight();
-                });
-            }
-        }
-        return false;
-    });
-
-    function closeVisibleSubMenu() {
-        jQuery('.leftpanel .nav-parent').each(function() {
-            var t = jQuery(this);
-            if (t.hasClass('nav-active')) {
-                t.find('> ul').slideUp(200, function() {
-                    t.removeClass('nav-active');
-                });
-            }
-        });
-    }
-
-    function adjustmainpanelheight() {
-        // Adjust mainpanel height
-        var docHeight = jQuery(document).height();
-        if (docHeight > jQuery('.mainpanel').height())
-            jQuery('.mainpanel').height(docHeight);
-    }
-    adjustmainpanelheight();
-
-
-    // Tooltip
-    jQuery('.tooltips').tooltip({
-        container: 'body'
-    });
-
-    // Popover
-    jQuery('.popovers').popover();
-
-    // Close Button in Panels
-    jQuery('.panel .panel-close').click(function() {
-        jQuery(this).closest('.panel').fadeOut(200);
-        return false;
-    });
-
-    // Form Toggles
-    jQuery('.toggle').toggles({
-        on: true
-    });
-
-    jQuery('.toggle-chat1').toggles({
-        on: false
-    });
-
-
-
-    // Minimize Button in Panels
-    jQuery('.minimize').click(function() {
-        var t = jQuery(this);
-        var p = t.closest('.panel');
-        if (!jQuery(this).hasClass('maximize')) {
-            p.find('.panel-body, .panel-footer').slideUp(200);
-            t.addClass('maximize');
-            t.html('&plus;');
-        } else {
-            p.find('.panel-body, .panel-footer').slideDown(200);
-            t.removeClass('maximize');
-            t.html('&minus;');
-        }
-        return false;
-    });
-
-
-    // Add class everytime a mouse pointer hover over it
-    jQuery('.nav-bracket > li').hover(function() {
-        jQuery(this).addClass('nav-hover');
-    }, function() {
-        jQuery(this).removeClass('nav-hover');
-    });
-
-
-    // Menu Toggle
-    jQuery('.menutoggle').click(function() {
-        console.log('test menutoggle');
-        var body = jQuery('body');
-        var bodypos = body.css('position');
+// jQuery(document).ready(function() {
+
+//     // Toggle Left Menu
+//     /*jQuery('.leftpanel .nav-parent > a').live('click', function() {
+
+//         var parent = jQuery(this).parent();
+//         var sub = parent.find('> ul');
+
+//         // Dropdown works only when leftpanel is not collapsed
+//         if (!jQuery('body').hasClass('leftpanel-collapsed')) {
+//             if (sub.is(':visible')) {
+//                 sub.slideUp(200, function() {
+//                     parent.removeClass('nav-active');
+//                     jQuery('.mainpanel').css({
+//                         height: ''
+//                     });
+//                     adjustmainpanelheight();
+//                 });
+//             } else {
+//                 closeVisibleSubMenu();
+//                 parent.addClass('nav-active');
+//                 sub.slideDown(200, function() {
+//                     adjustmainpanelheight();
+//                 });
+//             }
+//         }
+//         return false;
+//     });*/
+
+//     function closeVisibleSubMenu() {
+//         jQuery('.leftpanel .nav-parent').each(function() {
+//             var t = jQuery(this);
+//             if (t.hasClass('nav-active')) {
+//                 t.find('> ul').slideUp(200, function() {
+//                     t.removeClass('nav-active');
+//                 });
+//             }
+//         });
+//     }
+
+//     function adjustmainpanelheight() {
+//         // Adjust mainpanel height
+//         var docHeight = jQuery(document).height();
+//         if (docHeight > jQuery('.mainpanel').height())
+//             jQuery('.mainpanel').height(docHeight);
+//     }
+//     adjustmainpanelheight();
+
+
+//     // Tooltip
+//     jQuery('.tooltips').tooltip({
+//         container: 'body'
+//     });
+
+//     // Popover
+//     jQuery('.popovers').popover();
+
+//     // Close Button in Panels
+//     jQuery('.panel .panel-close').click(function() {
+//         jQuery(this).closest('.panel').fadeOut(200);
+//         return false;
+//     });
+
+//     // Form Toggles
+//     jQuery('.toggle').toggles({
+//         on: true
+//     });
+
+//     jQuery('.toggle-chat1').toggles({
+//         on: false
+//     });
+
+
+
+//     // Minimize Button in Panels
+//     jQuery('.minimize').click(function() {
+//         var t = jQuery(this);
+//         var p = t.closest('.panel');
+//         if (!jQuery(this).hasClass('maximize')) {
+//             p.find('.panel-body, .panel-footer').slideUp(200);
+//             t.addClass('maximize');
+//             t.html('&plus;');
+//         } else {
+//             p.find('.panel-body, .panel-footer').slideDown(200);
+//             t.removeClass('maximize');
+//             t.html('&minus;');
+//         }
+//         return false;
+//     });
+
+
+//     // Add class everytime a mouse pointer hover over it
+//     jQuery('.nav-bracket > li').hover(function() {
+//         jQuery(this).addClass('nav-hover');
+//     }, function() {
+//         jQuery(this).removeClass('nav-hover');
+//     });
+
+
+//     // Menu Toggle
+//     jQuery('.menutoggle').click(function() {
+//         console.log('test menutoggle');
+//         var body = jQuery('body');
+//         var bodypos = body.css('position');
 
-        if (bodypos != 'relative') {
+//         if (bodypos != 'relative') {
 
-            if (!body.hasClass('leftpanel-collapsed')) {
-                body.addClass('leftpanel-collapsed');
-                jQuery('.nav-bracket ul').attr('style', '');
+//             if (!body.hasClass('leftpanel-collapsed')) {
+//                 body.addClass('leftpanel-collapsed');
+//                 jQuery('.nav-bracket ul').attr('style', '');
 
-                jQuery(this).addClass('menu-collapsed');
+//                 jQuery(this).addClass('menu-collapsed');
 
-            } else {
-                body.removeClass('leftpanel-collapsed chat-view');
-                jQuery('.nav-bracket li.active ul').css({
-                    display: 'block'
-                });
+//             } else {
+//                 body.removeClass('leftpanel-collapsed chat-view');
+//                 jQuery('.nav-bracket li.active ul').css({
+//                     display: 'block'
+//                 });
 
-                jQuery(this).removeClass('menu-collapsed');
+//                 jQuery(this).removeClass('menu-collapsed');
 
-            }
-        } else {
+//             }
+//         } else {
 
-            if (body.hasClass('leftpanel-show'))
-                body.removeClass('leftpanel-show');
-            else
-                body.addClass('leftpanel-show');
+//             if (body.hasClass('leftpanel-show'))
+//                 body.removeClass('leftpanel-show');
+//             else
+//                 body.addClass('leftpanel-show');
 
-            adjustmainpanelheight();
-        }
+//             adjustmainpanelheight();
+//         }
 
-    });
+//     });
 
-    // Chat View
-    jQuery('.chatview2').click(function() {
-        console.log('test Chat view');
+//     // Chat View
+//     jQuery('#chatview').click(function() {
+//         console.log('test Chat view');
 
-        var body = jQuery('body');
-        var bodypos = body.css('position');
+//         var body = jQuery('body');
+//         var bodypos = body.css('position');
 
-        if (bodypos != 'relative') {
+//         if (bodypos != 'relative') {
 
-            if (!body.hasClass('chat-view')) {
-                body.addClass('leftpanel-collapsed chat-view');
-                jQuery('.nav-bracket ul').attr('style', '');
+//             if (!body.hasClass('chat-view')) {
+//                 body.addClass('leftpanel-collapsed chat-view');
+//                 jQuery('.nav-bracket ul').attr('style', '');
 
-            } else {
+//             } else {
 
-                body.removeClass('chat-view');
+//                 body.removeClass('chat-view');
 
-                if (!jQuery('.menutoggle').hasClass('menu-collapsed')) {
-                    jQuery('body').removeClass('leftpanel-collapsed');
-                    jQuery('.nav-bracket li.active ul').css({
-                        display: 'block'
-                    });
-                } else {
+//                 if (!jQuery('.menutoggle').hasClass('menu-collapsed')) {
+//                     jQuery('body').removeClass('leftpanel-collapsed');
+//                     jQuery('.nav-bracket li.active ul').css({
+//                         display: 'block'
+//                     });
+//                 } else {
 
-                }
-            }
+//                 }
+//             }
 
-        } else {
+//         } else {
 
-            if (!body.hasClass('chat-relative-view')) {
+//             if (!body.hasClass('chat-relative-view')) {
 
-                body.addClass('chat-relative-view');
-                body.css({
-                    left: ''
-                });
+//                 body.addClass('chat-relative-view');
+//                 body.css({
+//                     left: ''
+//                 });
 
-            } else {
-                body.removeClass('chat-relative-view');
-            }
-        }
+//             } else {
+//                 body.removeClass('chat-relative-view');
+//             }
+//         }
 
-    });
+//     });
 
-    reposition_topnav();
-    // reposition_searchform();
+//     reposition_topnav();
+//     // reposition_searchform();
 
-    jQuery(window).resize(function() {
+//     jQuery(window).resize(function() {
 
-        if (jQuery('body').css('position') == 'relative') {
+//         if (jQuery('body').css('position') == 'relative') {
 
-            jQuery('body').removeClass('leftpanel-collapsed chat-view');
+//             jQuery('body').removeClass('leftpanel-collapsed chat-view');
 
-        } else {
+//         } else {
 
-            jQuery('body').removeClass('chat-relative-view');
-            jQuery('body').css({
-                left: '',
-                marginRight: ''
-            });
-        }
+//             jQuery('body').removeClass('chat-relative-view');
+//             jQuery('body').css({
+//                 left: '',
+//                 marginRight: ''
+//             });
+//         }
 
 
-        // reposition_searchform();
-        reposition_topnav();
+//         // reposition_searchform();
+//         reposition_topnav();
 
-    });
+//     });
 
 
 
-    /* This function will reposition search form to the left panel when viewed
-     * in screens smaller than 767px and will return to top when viewed higher
-     * than 767px
-     */
-    function reposition_searchform() {
-        /* if (jQuery('.searchform').css('position') == 'relative') {
-             jQuery('.searchform').insertBefore('.leftpanelinner .userlogged');
-         } else {
-             jQuery('.searchform').insertBefore('.header-right');
-         }*/
-    }
+//     /* This function will reposition search form to the left panel when viewed
+//      * in screens smaller than 767px and will return to top when viewed higher
+//      * than 767px
+//      */
+//     function reposition_searchform() {
+//         /* if (jQuery('.searchform').css('position') == 'relative') {
+//              jQuery('.searchform').insertBefore('.leftpanelinner .userlogged');
+//          } else {
+//              jQuery('.searchform').insertBefore('.header-right');
+//          }*/
+//     }
 
 
 
-    /* This function allows top navigation menu to move to left navigation menu
-     * when viewed in screens lower than 1024px and will move it back when viewed
-     * higher than 1024px
-     */
-    function reposition_topnav() {
-        if (jQuery('.nav-horizontal').length > 0) {
+//     /* This function allows top navigation menu to move to left navigation menu
+//      * when viewed in screens lower than 1024px and will move it back when viewed
+//      * higher than 1024px
+//      */
+//     function reposition_topnav() {
+//         if (jQuery('.nav-horizontal').length > 0) {
 
-            // top navigation move to left nav
-            // .nav-horizontal will set position to relative when viewed in screen below 1024
-            if (jQuery('.nav-horizontal').css('position') == 'relative') {
+//             // top navigation move to left nav
+//             // .nav-horizontal will set position to relative when viewed in screen below 1024
+//             if (jQuery('.nav-horizontal').css('position') == 'relative') {
 
-                if (jQuery('.leftpanel .nav-bracket').length == 2) {
-                    jQuery('.nav-horizontal').insertAfter('.nav-bracket:eq(1)');
-                } else {
-                    // only add to bottom if .nav-horizontal is not yet in the left panel
-                    if (jQuery('.leftpanel .nav-horizontal').length === 0)
-                        jQuery('.nav-horizontal').appendTo('.leftpanelinner');
-                }
+//                 if (jQuery('.leftpanel .nav-bracket').length == 2) {
+//                     jQuery('.nav-horizontal').insertAfter('.nav-bracket:eq(1)');
+//                 } else {
+//                     // only add to bottom if .nav-horizontal is not yet in the left panel
+//                     if (jQuery('.leftpanel .nav-horizontal').length === 0)
+//                         jQuery('.nav-horizontal').appendTo('.leftpanelinner');
+//                 }
 
-                jQuery('.nav-horizontal').css({
-                        display: 'block'
-                    })
-                    .addClass('nav-pills nav-stacked nav-bracket');
+//                 jQuery('.nav-horizontal').css({
+//                         display: 'block'
+//                     })
+//                     .addClass('nav-pills nav-stacked nav-bracket');
 
-                jQuery('.nav-horizontal .children').removeClass('dropdown-menu');
-                jQuery('.nav-horizontal > li').each(function() {
+//                 jQuery('.nav-horizontal .children').removeClass('dropdown-menu');
+//                 jQuery('.nav-horizontal > li').each(function() {
 
-                    jQuery(this).removeClass('open');
-                    jQuery(this).find('a').removeAttr('class');
-                    jQuery(this).find('a').removeAttr('data-toggle');
+//                     jQuery(this).removeClass('open');
+//                     jQuery(this).find('a').removeAttr('class');
+//                     jQuery(this).find('a').removeAttr('data-toggle');
 
-                });
+//                 });
 
-                if (jQuery('.nav-horizontal li:last-child').has('form')) {
-                    jQuery('.nav-horizontal li:last-child form').addClass('searchform').appendTo('.topnav');
-                    jQuery('.nav-horizontal li:last-child').hide();
-                }
+//                 if (jQuery('.nav-horizontal li:last-child').has('form')) {
+//                     jQuery('.nav-horizontal li:last-child form').addClass('searchform').appendTo('.topnav');
+//                     jQuery('.nav-horizontal li:last-child').hide();
+//                 }
 
-            } else {
-                // move nav only when .nav-horizontal is currently from leftpanel
-                // that is viewed from screen size above 1024
-                if (jQuery('.leftpanel .nav-horizontal').length > 0) {
+//             } else {
+//                 // move nav only when .nav-horizontal is currently from leftpanel
+//                 // that is viewed from screen size above 1024
+//                 if (jQuery('.leftpanel .nav-horizontal').length > 0) {
 
-                    jQuery('.nav-horizontal').removeClass('nav-pills nav-stacked nav-bracket')
-                        .appendTo('.topnav');
-                    jQuery('.nav-horizontal .children').addClass('dropdown-menu').removeAttr('style');
-                    jQuery('.nav-horizontal li:last-child').show();
-                    jQuery('.searchform').removeClass('searchform').appendTo('.nav-horizontal li:last-child .dropdown-menu');
-                    jQuery('.nav-horizontal > li > a').each(function() {
+//                     jQuery('.nav-horizontal').removeClass('nav-pills nav-stacked nav-bracket')
+//                         .appendTo('.topnav');
+//                     jQuery('.nav-horizontal .children').addClass('dropdown-menu').removeAttr('style');
+//                     jQuery('.nav-horizontal li:last-child').show();
+//                     jQuery('.searchform').removeClass('searchform').appendTo('.nav-horizontal li:last-child .dropdown-menu');
+//                     jQuery('.nav-horizontal > li > a').each(function() {
 
-                        jQuery(this).parent().removeClass('nav-active');
+//                         jQuery(this).parent().removeClass('nav-active');
 
-                        if (jQuery(this).parent().find('.dropdown-menu').length > 0) {
-                            jQuery(this).attr('class', 'dropdown-toggle');
-                            jQuery(this).attr('data-toggle', 'dropdown');
-                        }
+//                         if (jQuery(this).parent().find('.dropdown-menu').length > 0) {
+//                             jQuery(this).attr('class', 'dropdown-toggle');
+//                             jQuery(this).attr('data-toggle', 'dropdown');
+//                         }
 
-                    });
-                }
+//                     });
+//                 }
 
-            }
+//             }
 
-        }
-    }
+//         }
+//     }
 
 
-    // Check if leftpanel is collapsed
-    if (jQuery('body').hasClass('leftpanel-collapsed')) {
-        jQuery('.nav-bracket .children').css({
-            display: ''
-        });
-    }
+//     // Check if leftpanel is collapsed
+//     if (jQuery('body').hasClass('leftpanel-collapsed')) {
+//         jQuery('.nav-bracket .children').css({
+//             display: ''
+//         });
+//     }
 
-    // Handles form inside of dropdown
-    jQuery('.dropdown-menu').find('form').click(function(e) {
-        e.stopPropagation();
-    });
+//     // Handles form inside of dropdown
+//     jQuery('.dropdown-menu').find('form').click(function(e) {
+//         e.stopPropagation();
+//     });
 
-});
+// });
 
 ; browserify_shim__define__module__export__(typeof custom != "undefined" ? custom : window.custom);
 
