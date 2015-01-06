@@ -1,11 +1,11 @@
 {
-    "name": "Hikick-India",
+    "name": "angular-bracket",
     "version": "0.0.1",
-    "description": "Hikick-India",
+    "description": "Bracket theme using bracket",
     "main": "index.js",
     "repository": {
         "type": "git",
-        "url": "https://github.com/monojitb02/hikick-india"
+        "url": "https://github.com/monojitb02/angular-bracket"
     },
     "scripts": {
         "start": "watchify -t partialify index.js -o build/bundle.js -v",
@@ -65,5 +65,5 @@
             "browserify-shim"
         ]
     },
-    "author": "Monojit"
+    "author": "Innofied"
 }
