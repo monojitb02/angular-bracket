@@ -223,6 +223,7 @@ module.exports = function($scope, $rootScope, $state, $http, $timeout) {
     $scope.$on('$stateChangeSuccess', function(event) {
         console.log('stateChangeSuccess');
     });
+    //TO_DO: try watching on window.location 
     $scope.$on('$viewContentLoaded', function(event) {
         console.log('viewContentLoaded');
         $timeout(function() {
