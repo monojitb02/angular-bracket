@@ -28,13 +28,13 @@ module.exports = function($scope, $rootScope, $state, $http, $timeout) {
         });
     };
     $scope.$on('$stateChangeSuccess', function(event) {
-        console.log('stateChangeSuccess');
+        // console.log('stateChangeSuccess');
     });
     //TO_DO: try watching on window.location 
     $scope.$on('$viewContentLoaded', function(event) {
-        console.log('viewContentLoaded');
+        //console.log('viewContentLoaded');
         $timeout(function() {
-            console.log('test window location', window.location, window.location.hash);
+            //console.log('test window location', window.location, window.location.hash);
             var originalHash = window.location.hash /*.replace(/\?.*$/, '')*/ ,
                 activeListElement = jQuery('a[href="' + originalHash + '"]').closest("li");
             $rootScope.currentPath = originalHash;
@@ -82,12 +82,12 @@ module.exports = function($scope, $rootScope, $state, $http, $timeout) {
 
     // Menu Toggle slide
     $scope.toggleMenuSlide = function($event) {
-        var navParent = jQuery($event.target).parent();
+        var navParent = jQuery($event.target).closest('a').parent();
         var sub = navParent.find('> ul');
-        console.log('menu slide');
+        //console.log('menu slide');
         // Dropdown works only when leftpanel is not collapsed
         if (!jQuery('body').hasClass('leftpanel-collapsed')) {
-            console.log(sub.is(':visible'));
+            //console.log(sub.is(':visible'));
             if (sub.is(':visible')) {
                 sub.slideUp(200, function() {
                     navParent.removeClass('nav-active');
@@ -109,7 +109,7 @@ module.exports = function($scope, $rootScope, $state, $http, $timeout) {
 
     // Menu Toggle
     $scope.toggleMenu = function() {
-        console.log('test menutoggle');
+        //console.log('test menutoggle');
         var body = jQuery('body');
         var bodypos = body.css('position');
         if (bodypos != 'relative') {
@@ -165,6 +165,11 @@ module.exports = function($scope, $rootScope, $state, $http, $timeout) {
                 body.removeClass('chat-relative-view');
             }
         }
+    };
+
+    //change state to profile
+    $scope.goMyProfile = function() {
+        $state.go('app.profile');
     };
 
 };

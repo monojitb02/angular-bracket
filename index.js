@@ -13,7 +13,6 @@ require('angular-bootstrap');
 require("jquery");
 require("jqueryValidate");
 require("jqueryUi");
-require("jqueryMigrate");
 require("bootstrap");
 // require("modernizr");
 // require("jquerySparkline");
